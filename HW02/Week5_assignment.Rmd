@@ -1,0 +1,212 @@
+---
+title: "PM566_ HW02"
+author: "Luqing Ren"
+date: "9/18/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#load the data set
+```{r}
+download.file(url = "https://github.com/USCbiostats/data-science-data/raw/master/01_chs/chs_regional.csv",destfile = "chs_regional.csv")
+download.file(url = "https://github.com/USCbiostats/data-science-data/raw/master/01_chs/chs_individual.csv",destfile = "chs_individual.csv")
+```
+```{r}
+library(data.table)
+region <- fread("chs_regional.csv")
+individual<- fread("chs_individual.csv")
+# merge two data sets
+data <- merge( x= region, y= individual, by= "townname", all= TRUE)
+```
+
+```{r}
+# question 1: data wrangling
+# 1) make sure you don’t have any duplicates by counting the number of rows
+nrow(individual) == nrow(data)
+```
+```{r}
+# 2) Create a new categorical variable named “obesity_level” and creat a summary table
+# that contains the minimum BMI, maximum BMI, and the total number of observations per category.
+library(tidyverse)
+data <-
+  data %>% 
+  mutate(obesity_level = case_when(
+    bmi <14 ~"underweight",
+    bmi <22 ~"normal",
+    bmi <24~ "overweight",
+    bmi >24 ~"obese",
+    TRUE ~ NA_character_
+  ))
+bmi_min <- data[, .SD[which.min(bmi)], by=obesity_level][,.(bmi,obesity_level)]
+bmi_max <- data[, .SD[which.max(bmi)], by=obesity_level][,.(bmi,obesity_level)]
+counts <- data[,.(Counts=length(bmi)), by=obesity_level]
+
+#merge bmi_min and bmi_max, length and rename colnames. 
+max_min <- merge(x=bmi_min, y=bmi_max, by="obesity_level", all=TRUE)
+count_table <- merge(x=max_min, y = counts, by="obesity_level", all.x = TRUE, all.y = FALSE)
+colnames(count_table) <- c("obesity_level", "bmi_min", "bmi_max","Total")
+count_table
+```
+
+
+```{r}
+# 3) Create another categorical variable named “smoke_gas_exposure” that summarizes “Second Hand Smoke” and “Gas Stove.” The variable should have four categories in total
+data <-
+  data %>% 
+  mutate(smoke_gas_exposure = case_when(
+    smoke ==1 & gasstove==1 ~"smoke_gas_exposure",
+    smoke ==1 & gasstove==0 ~"second hand smoke",
+    smoke ==0 & gasstove==1~ "gas stove",
+    smoke ==0 & gasstove==0 ~"None",
+    TRUE ~ NA_character_
+  ))
+table(data$smoke_gas_exposure)
+```
+
+```{r}
+# 4) Create four summary tables showing the average (or proportion, if binary) and sd of “Forced expiratory volume in 1 second (ml)” and asthma indicator by town, sex, obesity level, and “smoke_gas_exposure.”
+
+# summary table by town
+fev_ave <- data[, fev_ave := mean(fev, na.rm = T), by = townname][,.(fev_ave,townname)][,.SD[1], by=townname]
+fev_sd <- data[, fev_sd := sd(fev, na.rm = T), by = townname][,.(fev_sd,townname)][,.SD[1], by=townname]
+asthma_prop<- data[, prop := fifelse(asthma ==1, sum(.SD$asthma==1, na.rm = T)/.N,sum(.SD$asthma ==0,na.rm = T)/.N), by = townname][,.SD[1], by = townname][,.(townname,prop)]
+summary_1 <-data.table(townname=fev_ave$townname, fev_ave=fev_ave$fev_ave, fev_sd=fev_sd$fev_sd, asthma_prop=asthma_prop$prop)
+summary_1
+```
+
+```{r}
+# summary table by sex
+fev_ave_male <- data[, fev_ave := mean(fev, na.rm = T), by = male][,.(fev_ave,male)][,.SD[1], by=male]
+fev_sd_male <- data[, fev_sd := sd(fev, na.rm = T), by = male][,.(fev_sd,male)][,.SD[1], by=male]
+asthma_prop_male <- data[, prop := fifelse(asthma ==1, sum(.SD$asthma==1, na.rm = T)/.N,sum(.SD$asthma ==0,na.rm = T)/.N), by = male][,.SD[1], by = male][,.(male,prop)]
+data[, male := factor(male, levels = c(0,1), labels = c("Female","Male"))]
+summary_2 <-data.table(male=fev_ave_male$male, fev_ave_male=fev_ave_male$fev_ave, fev_sd_male=fev_sd_male$fev_sd, asthma_prop_male=asthma_prop_male$prop)
+summary_2
+```
+
+```{r}
+# summary table by obesity level
+fev_ave_ob <- data[, fev_ave := mean(fev, na.rm = T), by = obesity_level][,.(fev_ave,obesity_level)][,.SD[1], by=obesity_level]
+fev_sd_ob <- data[, fev_sd := sd(fev, na.rm = T), by = obesity_level][,.(fev_sd,obesity_level)][,.SD[1], by=obesity_level]
+asthma_prop_ob<- data[, prop := fifelse(asthma ==1, sum(.SD$asthma==1, na.rm = T)/.N,sum(.SD$asthma ==0,na.rm = T)/.N), by = obesity_level][,.SD[1], by = obesity_level][,.(obesity_level,prop)]
+summary_3 <-data.table(obesity_level=fev_ave_ob$obesity_level, fev_ave=fev_ave_ob$fev_ave, fev_sd=fev_sd_ob$fev_sd, asthma_prop=asthma_prop_ob$prop)
+summary_3
+```
+
+```{r}
+## summary table by smoke_gas_exposure
+fev_ave_gs <- data[, fev_ave := mean(fev, na.rm = T), by = smoke_gas_exposure][,.(fev_ave,smoke_gas_exposure)][,.SD[1], by=smoke_gas_exposure]
+fev_sd_gs <- data[, fev_sd := sd(fev, na.rm = T), by = smoke_gas_exposure][,.(fev_sd,smoke_gas_exposure)][,.SD[1], by=smoke_gas_exposure]
+asthma_prop_gs<- data[, prop := fifelse(asthma ==1, sum(.SD$asthma==1, na.rm = T)/.N,sum(.SD$asthma ==0,na.rm = T)/.N), by = smoke_gas_exposure][,.SD[1], by = smoke_gas_exposure][,.(smoke_gas_exposure,prop)]
+summary_4 <-data.table(smoke_gas_exposure=fev_ave_gs$smoke_gas_exposure, fev_ave=fev_ave_gs$fev_ave, fev_sd=fev_sd_gs$fev_sd, asthma_prop=asthma_prop_gs$prop)
+summary_4
+```
+
+```{r}
+#question 2: EDA
+# 1) check variables
+summary(data$bmi)
+summary(data$fev)
+# Facet plot showing scatterplots with regression lines of BMI vs FEV by “townname”
+library(tidyverse)
+library(ggplot2)
+data %>% 
+  filter(!(fev %in% NA)) %>% 
+  filter(!(bmi %in% NA)) %>% 
+  ggplot(mapping= aes(x= bmi, y= fev,color= townname))+
+  geom_point()+
+  geom_smooth(method = lm, color = "black",size = 0.5)+
+  labs(title = "Regression lines of BMI vs FEV by townname", x= "BMI", y= "FEV")+
+  facet_wrap(~townname, nrow=5)
+```
+
+- In each town, bmi has a positive relationship with fev.
+```{r}
+#2) Stacked histograms of FEV by BMI category  
+data %>% 
+   filter(!(fev %in% NA)) %>% 
+   filter(!(bmi %in% NA)) %>%
+   ggplot()+
+   geom_histogram(mapping= aes(x= fev, fill = obesity_level), binwidth = 30)+
+   scale_fill_brewer(palette = "Accent")
+```
+
+-There is a relatively normal distribution of fev in normal BMI people. Most of people with normal BMI level have fev value around 2000. Underweight group, overweight group and obesity group are not normally distribution. Overweight and obesity groups are have relatively higher fev than normal group.
+
+```{r}
+# FEV by smoke/gas exposure. 
+data %>% 
+   filter(!(fev %in% NA)) %>% 
+   filter(!(bmi %in% NA)) %>%
+   filter(!(smoke_gas_exposure %in% NA)) %>%
+   ggplot()+
+   geom_histogram(mapping= aes(x= fev, fill = smoke_gas_exposure),binwidth = 30)+
+   scale_fill_brewer(palette = "Dark2")
+```
+
+-  fev value has the same distribution by smoke_gas_exposure. fev is not related with smoke/gas exposure.
+
+```{r}
+
+# 3) Bar-chart of BMI category by smoke/gas exposure category
+data %>% 
+   filter(!(fev %in% NA)) %>% 
+   filter(!(bmi %in% NA)) %>%
+   filter(!(smoke_gas_exposure %in% NA)) %>%
+   ggplot()+
+   geom_col(mapping = (aes(x = smoke_gas_exposure, y = obesity_level, fill = obesity_level)))
+```
+
+
+```{r}
+
+# 4) Statistical summary graphs of FEV by BMI and FEV by smoke/gas exposure category
+# fev by bmi
+data %>% 
+  ggplot(aes(y= fev, fill= obesity_level))+
+  geom_boxplot()
+
+#fev by smoke_gas_exposure
+data %>% 
+  ggplot(aes( y= fev,fill = smoke_gas_exposure))+
+  geom_boxplot()
+```
+
+
+```{r}
+# 5) a leaflet map showing the concentrations of PM2.5 mass in each of the CHS communities
+library(leaflet)
+pm25_mass_pal = colorNumeric(c('blue','purple','red'), domain = data$pm25_mass)
+leaflet(data) %>% 
+addProviderTiles('OpenStreetMap') %>% 
+  addCircles(lat=~lat,lng=~lon, color=~pm25_mass_pal(pm25_mass),opacity=1, fillOpacity=1,radius=500) %>% 
+  addLegend('bottomleft', pal = pm25_mass_pal, values = data$pm25_mass, title =" Concentration of PM2.5 mass",opacity = 1)
+```
+
+
+```{r}
+
+# 6) choose a visualization to examine whether PM2.5 mass is associated with FEV
+data[, fev_ave := mean(fev, na.rm = T), by = townname]
+data %>% 
+  filter(!(fev %in% NA)) %>% 
+  ggplot(mapping = aes(x = pm25_mass, y= fev_ave))+
+  geom_point()+
+  geom_smooth(method =lm)+
+  labs(title = "PM2.5 mass vs FEV by townname", x= "PM2.5 mass", y= "FEV")
+  
+lm(fev~pm25_mass, data = data) %>% 
+  summary()
+```
+
+-As we can see from the boxplot, different PM2.5 mass has a relativly negative relationship with fev.
+
+
+
+
+
+
