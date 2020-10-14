@@ -2,9 +2,10 @@
 title: "PM566_ HW02"
 author: "Luqing Ren"
 date: "9/18/2020"
-output: html_document
-editor_options: 
-  chunk_output_type: console
+output: github_document
+always_allow_html: true
+
+
 ---
 
 ```{r setup, include=FALSE}
