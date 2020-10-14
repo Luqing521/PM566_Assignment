@@ -15,6 +15,7 @@ library(tidyverse)
 library(xml2)
 library(httr)
 library(stringr)
+
 # Using the NCBI API, look for papers that show up under the term "sars-cov-2 trial vaccine."Look for the data in the pubmed database.How many papers were you able to find?
 
 # Downloading the website
@@ -46,7 +47,7 @@ ids <- content(query_ids)
 ```{r get-details, eval=TRUE}
 # Turn the result into a character vector
 ids <- as.character(ids)
-cat(ids)
+
 # Find all the ids 
 ids <- str_extract_all(ids, "<Id>[0-9]+</Id>") 
 ids<-ids [[1]]
@@ -66,7 +67,7 @@ publications <- GET(
           rettype ="abstract" 
           )
 )
-publications
+
 # Turning the output into character vector
 publications <- content(publications)
 publications_txt <- as.character(publications)
