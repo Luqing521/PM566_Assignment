@@ -1,7 +1,6 @@
 ---
 title: "HW04"
 author: "Luqing Ren"
-date: "10/24/2020"
 output: github_document
 ---
 
