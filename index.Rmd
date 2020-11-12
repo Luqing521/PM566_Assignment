@@ -1,0 +1,146 @@
+---
+title: "PM566 Assignment 05"
+author: "Luqing Ren"
+output: 
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+---
+
+<br>
+
+This is my PM566 Assignment. I will showcase a few interactive visuals here.
+
+<br>
+
+```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
+
+library(data.table)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(knitr)
+
+# Initialize code chunk options
+opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  eval=TRUE,
+  echo = TRUE,
+  cache = FALSE,
+  fig.width = 7, 
+  fig.align = 'center',
+  fig.asp = 0.618,
+  out.width = "700px",
+  class.source = "code-r")
+```
+
+```{css, echo = FALSE}
+.code-r { /* Code block */
+  font-size: 15px;
+}
+
+.code-r-small { /* Code block */
+  font-size: 10px;
+}
+```
+
+<br>
+
+```{r load-data,,echo=FALSE}
+data <- read_csv("map.csv")
+data1<- read_csv("census_2.csv")
+```
+
+<br>
+
+## First step {.tabset}
+
+```{r,echo=FALSE}
+p<- 
+  plot_ly(data1, x = ~as.factor(community_cat), y = ~cardio,alpha = 0.1) %>% 
+  add_boxplot(color = ~community_cat) %>%
+  layout(title ="cardiovascular rate by community category ",
+         legend_title = "dis",
+         yaxis = list(title = "cardiovascular rate"), 
+         xaxis = list(title = "disadvantage community"))
+p %>% hide_legend()
+```
+Figure1 : Cardiovascular disease occurrence rate by community category. 
+ 
+ 
+
+```{r plot1, class.source="code-r-small",,echo=FALSE}
+
+p1_scatter <- data %>% 
+  plot_ly(x = ~PM2.5_mean, y = ~cardio_mean,
+          type = 'scatter', mode = 'markers', color = ~county_name,
+          size = ~PM2.5_mean, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5),
+          text = ~paste( paste("County: ", county_name, sep=""), paste(" PM2.5 value: ", PM2.5_mean, sep="") , paste("cardiovascular rate : ", cardio_mean, sep=""), sep = "<br>")) %>%
+  layout(title = "Cardiovascular rate vs. pollutant PM2.5",
+                yaxis = list(title = "cardiovascular rate"), 
+         xaxis = list(title = "PM2.5"),hovermode = "compare")
+
+p2_scatter <- data %>% 
+  plot_ly(x = ~ozone_mean, y = ~cardio_mean,
+          type = 'scatter', mode = 'markers', color = ~county_name,
+          size = ~ozone_mean, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5),
+          text = ~paste( paste("County: ", county_name, sep=""), paste(" Ozone value: ", ozone_mean, sep="") , paste("cardiovascular rate : ", cardio_mean, sep=""), sep = "<br>")) %>%
+  layout(title = "Cardiovascular rate vs. pollutant Ozone",
+                yaxis = list(title = "cardiovascular rate"), 
+         xaxis = list(title = "Ozone"),hovermode = "compare")
+
+```
+
+<br>
+
+## Second step {.tabset}
+
+Create tabs to display each figure
+
+### Scatterplot: with PM2.5
+
+```{r p1}
+p1_scatter
+```
+
+### Scatterplot: without Ozone
+
+```{r p2}
+p2_scatter
+```
+
+## {-}
+
+Figure2: The correlation within cardiovascular rate and pollution indicators: PM2.5 and Ozone.
+
+<br>
+
+## Third step {.tabset}
+```{r,echo=FALSE}
+map_data <- read.csv("new.csv")
+to_map<-as.data.table(map_data)[, .SD[1], by="county_name"]
+fig <- to_map 
+fig <- fig %>%
+  plot_ly(
+    lat = ~lat,
+    lon = ~long,
+    marker = list(color = "fuchsia"),
+    type = 'scattermapbox',
+    text = ~paste( paste(county_name, sep=""), paste("Cardiovascular rate : ", cardio_mean, sep=""), paste("Pollution score: ", pol_score, sep=""), sep = "<br>"))
+   
+fig <- fig %>%
+  layout(
+    mapbox = list(
+      style = 'open-street-map',
+      zoom =2.5,
+      center = list(lon = -118.9408, lat = 34.07497))) 
+fig
+```
+Figure3: A map shows the pollution score and cardiovascular rate data of each county in California. 
+
+Done!
+
+<br>
+<br>
